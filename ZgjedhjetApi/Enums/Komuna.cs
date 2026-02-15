@@ -2,7 +2,7 @@ namespace ZgjedhjetApi.Enums;
 
 public enum Komuna
 {
-    TeGjitha ,
+    TeGjitha,
     Ambasada_Vjenë,
     Ambasada_Shkup,
     Konsullata_Stamboll,

@@ -20,12 +20,7 @@ namespace ZgjedhjetApi.Controllers
             _db = db;
         }
 
-        /// <summary>
-        /// POST endpoint to import CSV file.
-        /// This version supports a "wide" CSV where each party is its own column (Partia111..Partia138).
-        /// It normalizes/pivots the file into rows with fields: Kategoria, Komuna, Qendra_e_Votimit, VendVotimi, Partia, Vota.
-        /// Only rows with Vota > 0 are inserted to keep the table compact. Adjust if you need zeros persisted.
-        /// </summary>
+
         [HttpPost("import")]
         public async Task<ActionResult<CsvImportResponse>> MigrateData(IFormFile file)
         {
@@ -69,7 +64,7 @@ namespace ZgjedhjetApi.Controllers
                     .Select(h => h.Trim().Trim('"'))
                     .ToArray();
 
-                // Find fixed column indices (be a bit permissive with header variations)
+
                 int idxKategoria = Array.FindIndex(headers, h => string.Equals(h, "Kategoria", StringComparison.OrdinalIgnoreCase));
                 int idxKomuna = Array.FindIndex(headers, h => string.Equals(h, "Komuna", StringComparison.OrdinalIgnoreCase));
                 int idxQendra = Array.FindIndex(headers, h => h != null && h.StartsWith("Qendra", StringComparison.OrdinalIgnoreCase));
@@ -82,7 +77,7 @@ namespace ZgjedhjetApi.Controllers
                     return BadRequest(response);
                 }
 
-                // Identify party columns (headers that start with "Partia", case-insensitive)
+
                 var partyColumns = new List<(int Index, string Header)>();
                 for (int i = 0; i < headers.Length; i++)
                 {
@@ -107,7 +102,7 @@ namespace ZgjedhjetApi.Controllers
 
                     var parts = line.Split(',', StringSplitOptions.None).Select(p => p.Trim().Trim('"')).ToArray();
 
-                    // If a row has fewer columns than header, skip / report
+
                     if (parts.Length < headers.Length)
                     {
                         errors.Add($"Line {lineNumber}: column count {parts.Length} less than header count {headers.Length}.");
@@ -131,7 +126,7 @@ namespace ZgjedhjetApi.Controllers
                         continue;
                     }
 
-                    // For each party column create a record (only if votes > 0)
+
                     foreach (var (idx, partyHeader) in partyColumns)
                     {
                         var rawVotes = parts[idx];
@@ -139,17 +134,17 @@ namespace ZgjedhjetApi.Controllers
                             continue;
 
                         if (!int.TryParse(rawVotes, out var votes))
-                            continue; // ignore malformed vote cells
+                            continue;
 
                         if (votes == 0)
-                            continue; // skip zeros to reduce noise; remove this check if zeros must be stored
+                            continue; 
 
-                        // partyHeader is expected like "Partia111" -> enum name "Partia111"
+
                         var enumName = partyHeader.Replace(" ", "", StringComparison.OrdinalIgnoreCase);
                         if (!Enum.TryParse<Partia>(enumName, true, out var partia))
                         {
-                            // try to normalize header (e.g., if header is "Partia 111")
                             var alt = enumName.Replace("Partia", "Partia", StringComparison.OrdinalIgnoreCase).Replace(" ", "", StringComparison.OrdinalIgnoreCase);
+                         
                             if (!Enum.TryParse<Partia>(alt, true, out partia))
                             {
                                 errors.Add($"Line {lineNumber}: unknown party header '{partyHeader}'.");
@@ -210,9 +205,7 @@ namespace ZgjedhjetApi.Controllers
             }
         }
 
-        /// <summary>
-        /// GET endpoint to retrieve and filter electoral data
-        /// </summary>
+  
         [HttpGet]
         public async Task<ActionResult<ZgjedhjetAggregatedResponse>> GetZgjedhjet(
             [FromQuery] Kategoria? kategoria = null,
@@ -277,7 +270,7 @@ namespace ZgjedhjetApi.Controllers
             {
 
                 _logger.LogError(ex, "Error retrieving Zgjedhjet");
-                // Ensure we return a well-formed response object expected by the client
+
                 response.Results = new List<PartiaVotesResponse>();
                 return StatusCode(500, response);
             }
